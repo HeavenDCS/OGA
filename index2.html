@@ -1,0 +1,761 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operation Guardian Angel - DCS World SAR Server</title>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Teko:wght@400;600;700&family=Inter:wght@400;700&family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+    <style>
+        /*
+        ==========================================================================
+         1. ROOT & GLOBAL STYLES
+        ==========================================================================
+        */
+        :root {
+            /* COLORS */
+            --green-dark: #0a3622;
+            --green-med: #1a4d2e;
+            --amber-alert: #ff8c00;
+            --steel-blue: #4a5568;
+            --off-white: #e2e8f0;
+            --text-muted: #a0aec0;
+            --cyan-glow: #00ffff;
+            --red-alert: #e53e3e;
+            --green-online: #48bb78;
+
+            /* GLASSMORPHISM */
+            --glass-bg: rgba(74, 85, 104, 0.15); /* Steel blue at 15% */
+            --glass-border: rgba(226, 232, 240, 0.2);
+            --glass-blur: blur(12px);
+
+            /* FONTS */
+            --font-header: 'Teko', sans-serif;
+            --font-body: 'Inter', sans-serif;
+            --font-mono: 'Roboto Mono', monospace;
+
+            /* USER-PROVIDED BACKGROUND - REPLACED FOR SAR THEME */
+            --bg-image: url('./back.png');
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: var(--font-body);
+            color: var(--off-white);
+            background-color: #02040a; /* Fallback */
+            line-height: 1.6;
+            overflow-x: hidden;
+            position: relative;
+        }
+
+        /*
+        ==========================================================================
+         2. BACKGROUND & ATMOSPHERIC EFFECTS
+        ==========================================================================
+        */
+
+        /* Parallax Background */
+        .background-container {
+            background-image: var(--bg-image);
+            background-position: center center;
+            background-repeat: no-repeat;
+            background-size: cover;
+            background-attachment: fixed; /* Creates the parallax effect */
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100vh;
+            z-index: -5;
+        }
+
+        /* Darkening Overlay */
+        .overlay-dark {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(180deg, rgba(2, 4, 10, 0.7) 0%, rgba(2, 4, 10, 0.9) 100%);
+            z-index: -4;
+        }
+
+        /* HUD Grid Overlay */
+        .grid-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(to right, rgba(74, 85, 104, 0.1) 1px, transparent 1px),
+                linear-gradient(to bottom, rgba(74, 85, 104, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            z-index: -3;
+            pointer-events: none;
+        }
+
+        /* Scanline/Radar Sweep */
+        .scanline-effect {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            z-index: -2;
+            pointer-events: none;
+        }
+
+        .scanline-effect::after {
+            content: "";
+            position: absolute;
+            left: 0;
+            width: 100%;
+            height: 4px;
+            background: linear-gradient(180deg, rgba(0, 255, 255, 0) 0%, rgba(0, 255, 255, 0.15) 50%, rgba(0, 255, 255, 0) 100%);
+            animation: scan 8s linear infinite;
+            box-shadow: 0 0 10px rgba(0, 255, 255, 0.2);
+        }
+
+        @keyframes scan {
+            0% { top: -10%; }
+            100% { top: 110%; }
+        }
+
+        /* Atmospheric Particles (Subtle Noise) */
+        .noise-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            opacity: 0.04;
+            pointer-events: none;
+            background: url(data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAANElEQVR42mP4//8/AyUYwQAGYJBvIwYmEIAZgCYAMwCbAEwAmACYAMwAmACYAEwAxgB6AABFrAIBYd6y+wAAAABJRU5ErkJggg==);
+            animation: noise 0.3s steps(2) infinite;
+        }
+
+        @keyframes noise {
+            0% { background-position: 0 0; }
+            50% { background-position: 10px 10px; }
+            100% { background-position: 0 0; }
+        }
+
+        /*
+        ==========================================================================
+         3. MAIN LAYOUT & TYPOGRAPHY
+        ==========================================================================
+        */
+        .container {
+            width: 90%;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 4rem 0;
+        }
+
+        h1, h2, h3, h4 {
+            font-family: var(--font-header);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            font-weight: 600;
+            color: var(--off-white);
+            text-shadow: 0 0 10px rgba(0, 255, 255, 0.1);
+        }
+
+        h1 {
+            font-size: 6rem; /* Large stencil style */
+            font-weight: 700;
+            line-height: 1;
+            color: var(--off-white);
+        }
+
+        h2 {
+            font-size: 2.5rem;
+            color: var(--cyan-glow);
+            margin-bottom: 1rem;
+        }
+
+        h3 {
+            font-size: 2rem;
+            color: var(--amber-alert);
+            margin-bottom: 0.5rem;
+        }
+
+        p {
+            font-size: 1rem;
+            color: var(--text-muted);
+            margin-bottom: 1.5rem;
+        }
+
+        a {
+            text-decoration: none;
+            color: var(--cyan-glow);
+            transition: color 0.3s ease;
+        }
+
+        a:hover {
+            color: var(--off-white);
+        }
+
+        .monospace {
+            font-family: var(--font-mono);
+            color: var(--amber-alert);
+            font-size: 0.9rem;
+        }
+
+        /*
+        ==========================================================================
+         4. LOAD-IN ANIMATIONS
+        ==========================================================================
+        */
+        .fade-in-up {
+            opacity: 0;
+            transform: translateY(30px);
+            animation: fadeInUp 0.8s ease-out forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* Staggered delays */
+        .hero h1 { animation-delay: 0.2s; }
+        .hero h2 { animation-delay: 0.4s; }
+        .hero .tagline { animation-delay: 0.6s; }
+        .hero .hero-cta-group { animation-delay: 0.8s; }
+
+        .info-grid .card:nth-child(1) { animation-delay: 1.0s; }
+        .info-grid .card:nth-child(2) { animation-delay: 1.1s; }
+        .info-grid .card:nth-child(3) { animation-delay: 1.2s; }
+        .info-grid .card:nth-child(4) { animation-delay: 1.3s; }
+
+        .features h2 { animation-delay: 1.4s; }
+        .features-grid .card:nth-child(1) { animation-delay: 1.5s; }
+        .features-grid .card:nth-child(2) { animation-delay: 1.6s; }
+        .features-grid .card:nth-child(3) { animation-delay: 1.7s; }
+
+        .final-cta { animation-delay: 1.8s; }
+
+        /*
+        ==========================================================================
+         5. HERO SECTION
+        ==========================================================================
+        */
+        .hero {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: flex-start;
+            position: relative;
+        }
+
+        .hero .tagline {
+            font-size: 1.25rem;
+            color: var(--off-white);
+            max-width: 600px;
+            margin-bottom: 2rem;
+        }
+
+        .hero-cta-group {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .cta-discord-hero {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.75rem;
+            background: linear-gradient(45deg, var(--cyan-glow), #00bfff);
+            color: #02040a;
+            font-family: var(--font-header);
+            font-size: 1.5rem;
+            font-weight: 700;
+            letter-spacing: 1.5px;
+            padding: 0.75rem 2rem;
+            border-radius: 4px;
+            text-transform: uppercase;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            animation: pulse-glow 2s infinite ease-in-out;
+        }
+
+        .cta-discord-hero i {
+            font-size: 1.75rem;
+        }
+
+        .cta-discord-hero:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 40px var(--cyan-glow);
+            color: #02040a;
+        }
+
+        @keyframes pulse-glow {
+            0%   { box-shadow: 0 0 15px rgba(0, 255, 255, 0.5); }
+            50%  { box-shadow: 0 0 30px rgba(0, 255, 255, 1); }
+            100% { box-shadow: 0 0 15px rgba(0, 255, 255, 0.5); }
+        }
+
+        .server-status {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            font-family: var(--font-mono);
+            font-size: 1rem;
+            color: var(--green-online);
+            border: 1px solid var(--green-med);
+            background: rgba(26, 77, 46, 0.2);
+            padding: 0.5rem 1rem;
+            border-radius: 4px;
+        }
+
+        .server-status .status-light {
+            width: 12px;
+            height: 12px;
+            background-color: var(--green-online);
+            border-radius: 50%;
+            box-shadow: 0 0 10px var(--green-online);
+            animation: pulse-live 1.5s infinite;
+        }
+
+        @keyframes pulse-live {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+
+        .classified-stamp {
+            position: absolute;
+            top: 5rem;
+            right: 0;
+            font-family: var(--font-header);
+            font-size: 1.5rem;
+            color: var(--amber-alert); /* Changed to Amber */
+            border: 3px solid var(--amber-alert); /* Changed to Amber */
+            padding: 0.5rem 1rem;
+            transform: rotate(15deg);
+            opacity: 0.7;
+            letter-spacing: 3px;
+        }
+
+        /*
+        ==========================================================================
+         6. GLASSMORPHIC CARDS (GENERAL)
+        ==========================================================================
+        */
+        .glass-card {
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 12px;
+            padding: 2rem;
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.2);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur); /* Safari support */
+            transition: transform 0.4s cubic-bezier(0.25, 0.8, 0.25, 1), box-shadow 0.4s ease;
+            position: relative;
+            overflow: hidden; /* Needed for corner brackets */
+        }
+
+        /* 3D Hover Transform */
+        .info-grid, .features-grid {
+            perspective: 1500px; /* Apply perspective to the PARENT */
+        }
+
+        .glass-card:hover {
+            transform: perspective(1000px) rotateX(3deg) rotateY(-4deg) scale(1.05);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+            border-color: rgba(226, 232, 240, 0.5);
+        }
+
+        /* HUD Corner Brackets */
+        .hud-corners::before,
+        .hud-corners::after {
+            content: '';
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            border-color: var(--amber-alert);
+            border-style: solid;
+            opacity: 0.6;
+            transition: all 0.4s ease;
+        }
+        .hud-corners::before {
+            top: 15px;
+            left: 15px;
+            border-width: 2px 0 0 2px;
+        }
+        .hud-corners::after {
+            bottom: 15px;
+            right: 15px;
+            border-width: 0 2px 2px 0;
+        }
+        .glass-card:hover .hud-corners::before,
+        .glass-card:hover .hud-corners::after {
+            opacity: 1;
+            width: 30px;
+            height: 30px;
+        }
+
+        .card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 1rem;
+        }
+
+        .card-designation {
+            font-family: var(--font-mono);
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        /*
+        ==========================================================================
+         7. INFO GRID SECTION
+        ==========================================================================
+        */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1.5rem;
+        }
+
+        .info-grid .glass-card h3 {
+            font-size: 1.5rem;
+        }
+        
+        .info-grid .glass-card ul {
+            list-style: none;
+            padding-left: 0;
+            color: var(--text-muted);
+        }
+
+        .info-grid .glass-card ul li {
+            position: relative;
+            padding-left: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .info-grid .glass-card ul li::before {
+            content: '\f105'; /* Font Awesome angle-right */
+            font-family: 'Font Awesome 6 Free';
+            font-weight: 900;
+            position: absolute;
+            left: 0;
+            top: 2px;
+            color: var(--amber-alert);
+        }
+
+        /*
+        ==========================================================================
+         8. FEATURES SECTION
+        ==========================================================================
+        */
+        .features {
+            text-align: center;
+        }
+
+        .features h2 {
+            margin-bottom: 3rem;
+        }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 1.5rem;
+            text-align: left;
+        }
+
+        .feature-card .icon {
+            font-size: 3rem;
+            color: var(--cyan-glow);
+            margin-bottom: 1rem;
+            text-shadow: 0 0 15px var(--cyan-glow);
+        }
+
+        .feature-card h3 {
+            font-size: 1.5rem;
+            color: var(--off-white);
+        }
+
+        /*
+        ==========================================================================
+         9. FINAL CTA (COMMS PANEL)
+        ==========================================================================
+        */
+        .final-cta {
+            text-align: center;
+            padding: 6rem 0;
+        }
+
+        .comms-panel {
+            background: #080c12;
+            border: 2px solid var(--steel-blue);
+            border-radius: 8px;
+            padding: 2rem;
+            max-width: 700px;
+            margin: 0 auto;
+            position: relative;
+            box-shadow: 0 0 30px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,0,0,0.7);
+        }
+
+        .comms-panel::before, .comms-panel::after {
+            content: '';
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            top: 1.5rem;
+        }
+        .comms-panel::before {
+            left: 1.5rem;
+            background: var(--red-alert);
+            box-shadow: 0 0 8px var(--red-alert);
+        }
+        .comms-panel::after {
+            right: 1.5rem;
+            background: var(--green-online);
+            box-shadow: 0 0 8px var(--green-online);
+            animation: pulse-live 2s infinite 1s;
+        }
+
+        .comms-panel-header {
+            font-family: var(--font-mono);
+            color: var(--text-muted);
+            font-size: 0.9rem;
+            margin-bottom: 1.5rem;
+            border-bottom: 1px dashed var(--steel-blue);
+            padding-bottom: 1rem;
+        }
+
+        .cta-comms-button {
+            display: block;
+            font-family: var(--font-header);
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: var(--off-white);
+            background: var(--green-med);
+            padding: 1rem 2rem;
+            border: 2px solid var(--green-online);
+            border-radius: 4px;
+            box-shadow: 0 0 20px rgba(72, 187, 120, 0.3), inset 0 0 10px rgba(0,0,0,0.5);
+            transition: all 0.3s ease;
+        }
+
+        .cta-comms-button:hover {
+            background: var(--green-dark);
+            color: var(--off-white);
+            border-color: var(--cyan-glow);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+            /* Radio/Comms hover animation */
+            animation: comms-static 0.1s steps(2) infinite;
+        }
+
+        @keyframes comms-static {
+            0%   { text-shadow: 0 0 5px var(--off-white), 0 0 10px var(--cyan-glow); }
+            100% { text-shadow: -1px 1px 3px var(--off-white), 1px -1px 5px var(--cyan-glow); }
+        }
+
+        /*
+        ==========================================================================
+         10. FOOTER
+        ==========================================================================
+        */
+        footer {
+            text-align: center;
+            padding: 2rem 0;
+            font-family: var(--font-mono);
+            font-size: 0.9rem;
+            color: var(--steel-blue);
+            border-top: 1px solid rgba(74, 85, 104, 0.3);
+        }
+
+        /*
+        ==========================================================================
+         11. RESPONSIVENESS
+        ==========================================================================
+        */
+        @media (max-width: 992px) {
+            h1 { font-size: 4.5rem; }
+            h2 { font-size: 2rem; }
+            .hero { align-items: center; text-align: center; }
+            .hero-cta-group { flex-direction: column; }
+        }
+
+        @media (max-width: 768px) {
+            h1 { font-size: 3.5rem; }
+            h2 { font-size: 1.75rem; }
+            
+            .info-grid, .features-grid {
+                grid-template-columns: 1fr; /* Stack cards */
+            }
+
+            /* Disable 3D hover on mobile (awkward on touch) */
+            .glass-card:hover {
+                transform: scale(1.03);
+                box-shadow: 0 12px 30px rgba(0,0,0,0.3);
+            }
+
+            /* Disable parallax on mobile (performance) */
+            .background-container {
+                background-attachment: scroll;
+            }
+
+            .classified-stamp {
+                font-size: 1rem;
+                padding: 0.25rem 0.5rem;
+                transform: rotate(10deg);
+                top: 2rem;
+            }
+
+            .cta-comms-button {
+                font-size: 1.75rem;
+            }
+        }
+
+    </style>
+</head>
+<body>
+
+    <div class="background-container"></div>
+    <div class="overlay-dark"></div>
+    <div class="grid-overlay"></div>
+    <div class="scanline-effect"></div>
+    <div class="noise-overlay"></div>
+
+    <main>
+
+        <section class="hero container">
+            <div class="classified-stamp fade-in-up">PRIORITY</div> <h1 class="fade-in-up">Operation<br>Guardian Angel</h1>
+            <h2 class="fade-in-up">DCS World Search & Rescue Server</h2> <p class="tagline fade-in-up">
+                Dynamic, persistent, and immersive. Experience the next generation of humanitarian and rescue simulation in a 24/7 response environment. </p>
+            <div class="hero-cta-group fade-in-up">
+                <a href="https://discord.com" target="_blank" class="cta-discord-hero">
+                    <i class="fa-brands fa-discord"></i>
+                    Join the Briefing
+                </a>
+                <div class="server-status">
+                    <span class="status-light"></span>
+                    STATUS: <span class="monospace">ONLINE</span>
+                </div>
+            </div>
+            
+            <div style="position: absolute; bottom: 2rem; left: 2rem; font-family: var(--font-mono); color: var(--text-muted); opacity: 0.3; font-size: 0.8rem;">
+                COORDS: 42° 21' 36" N, 43° 17' 17" E <br>
+                ALT: 35,000 FT AGL
+            </div>
+            <div style="position: absolute; bottom: 2rem; right: 2rem; font-family: var(--font-mono); color: var(--text-muted); opacity: 0.3; font-size: 0.8rem; text-align: right;">
+                SYS_CHK: OK <br>
+                LINK_STAT: SECURE
+            </div>
+        </section>
+
+        <section class="info-grid-section container">
+            <div class="info-grid">
+                
+                <div class="glass-card hud-corners fade-in-up">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-map-pin" style="color: var(--amber-alert); margin-right: 0.5rem;"></i> Mission Types</h3> <span class="card-designation">M-TYPE/SAR</span>
+                    </div>
+                    <ul>
+                        <li>Dynamic Rescue Scenarios</li> <li>Persistent Civilian World</li> <li>Co-op Rescue Tasking</li> <li>Weekly Large-Scale SAR Ops</li> </ul>
+                </div>
+
+                <div class="glass-card hud-corners fade-in-up">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-helicopter" style="color: var(--amber-alert); margin-right: 0.5rem;"></i> Core Hangar</h3> <span class="card-designation">ACFT-ROSTER/SAR</span>
+                    </div>
+                    <ul>
+                        <li>UH-1H Huey, Mi-8MTV2</li> <li>SA-342M Gazelle, Ka-50 III</li> <li>C-130 (Mod), An-26</li> <li>All Rotary & Support Wings</li> </ul>
+                </div>
+
+                <div class="glass-card hud-corners fade-in-up">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-book" style="color: var(--amber-alert); margin-right: 0.5rem;"></i> Flight Procedures</h3> <span class="card-designation">SOP-DOC/01A</span>
+                    </div>
+                    <ul>
+                        <li>SRS Required for Comms</li> <li>Follow ATC & Dispatch</li> <li>Adhere to Flight Plans</li> <li>Mature Conduct Only</li>
+                    </ul>
+                </div>
+
+                <div class="glass-card hud-corners fade-in-up">
+                    <div class="card-header">
+                        <h3><i class="fa-solid fa-clock" style="color: var(--amber-alert); margin-right: 0.5rem;"></i> Server Hours</h3>
+                        <span class="card-designation">OPORD/24-7</span>
+                    </div>
+                    <ul>
+                        <li>Server: 24/7 Uptime</li>
+                        <li>High-Traffic: 1800Z-0200Z</li>
+                        <li>Ops: Fri & Sat 2000Z</li>
+                        <li>Dispatch: Active EU/NA</li> </ul>
+                </div>
+
+            </div>
+        </section>
+
+        <section class="features container">
+            <h2 class="fade-in-up">Our Mission</h2> <div class="features-grid">
+                
+                <div class="glass-card feature-card fade-in-up">
+                    <div class="icon"><i class="fa-solid fa-satellite-dish"></i></div>
+                    <h3>Realistic Scenarios</h3> <p>Experience true-to-life rescue missions, complex weather, AI ground crews, and mandatory comms via SRS.</p> </div>
+
+                <div class="glass-card feature-card fade-in-up">
+                    <div class="icon"><i class="fa-solid fa-users"></i></div>
+                    <h3>Active Community</h3>
+                    <p>Join hundreds of active pilots. From rookies to veterans, our community is built on coordination and professionalism.</p> </div>
+
+                <div class="glass-card feature-card fade-in-up">
+                    <div class="icon"><i class="fa-solid fa-map-location-dot"></i></div>
+                    <h3>Dynamic Operations</h3>
+                    <p>Participate in large-scale, human-run operations where your successful rescues have a direct and persistent impact on the world.</p> </div>
+                
+                 <div class="glass-card feature-card fade-in-up">
+                    <div class="icon"><i class="fa-solid fa-award"></i></div>
+                    <h3>In-Depth Training</h3>
+                    <p>Access our dedicated training servers and materials, with instructor-led sessions for all major rotary airframes and rescue procedures.</p> </div>
+
+            </div>
+        </section>
+
+        <section class="final-cta container fade-in-up">
+            <div class="comms-panel">
+                <div class="comms-panel-header">
+                    // SECURE CHANNEL ESTABLISHED // ROUTING TO DISCORD...
+                </div>
+                <a href="https://discord.com" target="_blank" class="cta-comms-button">
+                    <i class="fa-solid fa-headset"></i> Join Discord HQ
+                </a>
+            </div>
+        </section>
+
+    </main>
+
+    <footer>
+        <p>&copy; 2025 Operation Guardian Angel. Not affiliated with Eagle Dynamics. <br>
+        [DCS-OGA-LNDP-v1.2-SAR]
+        </p>
+    </footer>
+
+</body>
+</html>
